@@ -14,19 +14,25 @@ import {
   share,
 } from 'rxjs/operators';
 import * as WebSocket from 'ws';
+import { ConnectionEvent } from './types';
 
 export class MixerConnection {
   private outboundSubject$: Subject<string>;
   private socket$: WebSocketSubject<string>;
+
+  connect$ = new Subject();
+  disconnect$ = new Subject();
+
+  status$: Observable<ConnectionEvent> = merge(
+    this.connect$.pipe(mapTo(ConnectionEvent.Connected)),
+    this.disconnect$.pipe(mapTo(ConnectionEvent.Disconnected))
+  ).pipe(share());
 
   outbound$: Observable<string>;
   inbound$: Observable<string>;
   allMessages$: Observable<string>;
 
   constructor(private targetIP: string) {
-    const connect$ = new Subject();
-    const disconnect$ = new Subject();
-
     this.socket$ = webSocket<string>({
       url: `ws://${this.targetIP}/socket.io/1/websocket/${
         Math.random() * 10000
@@ -34,8 +40,8 @@ export class MixerConnection {
       WebSocketCtor: WebSocket,
       serializer: data => data,
       deserializer: ({ data }) => data,
-      openObserver: connect$,
-      closeObserver: disconnect$,
+      openObserver: this.connect$,
+      closeObserver: this.disconnect$,
     });
 
     this.outboundSubject$ = new Subject<string>();
@@ -50,15 +56,12 @@ export class MixerConnection {
      * every 2 seconds
      * start on connect, stop on disconnect
      */
-    connect$
+    this.connect$
       .pipe(
-        switchMap(() => interval(2000).pipe(takeUntil(disconnect$))),
+        switchMap(() => interval(2000).pipe(takeUntil(this.disconnect$))),
         mapTo('ALIVE')
       )
       .subscribe(this.outboundSubject$);
-
-    connect$.subscribe(e => console.log('Connected'));
-    disconnect$.subscribe(e => console.log('Disconnected'));
 
     /**
      * Send outbound messages

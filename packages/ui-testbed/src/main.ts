@@ -1,4 +1,4 @@
-import { SoundcraftUI } from 'fmalcher/soundcraft-ui-connection';
+import { SoundcraftUI } from 'soundcraft-ui-connection';
 
 import * as express from 'express';
 
