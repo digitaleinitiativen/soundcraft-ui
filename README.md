@@ -21,3 +21,8 @@ You must also build the library so that the application can use it:
 nx build mixer-connection --watch
 nx serve ui-testbed
 ```
+
+Docker:
+nx build --prod --buildLibsFromSource --externalDependencies=none
+docker build -t soundcraftui .
+nx run ui-testbed:serve
